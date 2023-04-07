@@ -3,7 +3,7 @@ from src.handle_flag import handle_flag
 
 HOST_NAME = socket.gethostname()
 IP_ADDRESS = socket.gethostbyname(HOST_NAME) 
-PORT = 18001
+PORT = 18000
 MAX_USERS = 3                                                   
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)            
@@ -22,7 +22,9 @@ def handle(client):
         try:
             data = client.recv(1024)
             received_obj = pickle.loads(data)
-            broadcast(handle_flag(received_obj, nicknames, clients, client))
+            print('recu')
+            print(received_obj)
+            handle_flag(received_obj, nicknames, clients, client)
         except:                                                        
             index = clients.index(client)
             clients.remove(client)
@@ -36,7 +38,6 @@ def handle(client):
 def receive():                                                          
     while True:
         client, address = server.accept()
-        print(client)
         print("Connected with {}".format(str(address)))      
         clients.append(client)
         thread = threading.Thread(target=handle, args=(client,))

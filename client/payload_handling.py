@@ -30,6 +30,12 @@ def join_session(username):
     payload["JOIN_REQUEST_FLAG"] = 1
     return pickle.dumps(payload)
 
+
+def quit_session():
+    payload = payload_type.copy()
+    payload["QUIT_REQUEST_FLAG"] = 1
+    return pickle.dumps(payload)
+
 def report_request():
     payload = payload_type.copy()
     payload["REPORT_REQUEST_FLAG"] = 1

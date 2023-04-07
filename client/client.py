@@ -1,11 +1,11 @@
 import socket, threading, sys, pickle
-from payload_handling import send_chat, join_session, report_request
+from src.payload_type import payload_type
 
 host_name = socket.gethostname()
 ip = socket.gethostbyname(host_name)
-
-PORT = 18001
 SERVER_STATUS = False
+IS_CONNECTED = False
+STOP_EVENT = threading.Event()
 
 def start_menu():
     print("Please select one of the following options:")
@@ -15,69 +15,68 @@ def start_menu():
     choice = input("Your choice: ")
     return choice
 
-def connect():
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        client.connect((ip, PORT))
-    except:
-        print('The server cannot accept the connection.')
-        client.close()
-        sys.exit()
-    return client
+# def connect():
+#     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     try:
+#         client.connect((ip, PORT))
+#     except:
+#         print('The server cannot accept the connection.')
+#         client.close()
+#         sys.exit()
+#     return client
 
-def join_server(client):
-    nickname = input("Choose your nickname: ")
-    client.sendall(join_session(nickname))
-    print("The server welcomes you to the chatroom.")
-    print("Type lowercase 'q' and press enter at any time to quit the chatroom.")
-    print("Type lowercase 'a' and press enter at any time to upload an attachment to the chatroom.")
-    data = client.recv(1024)
-    receive_obj = pickle.loads(data)
-    print("Here is a history of the chatroom.")
-    print(receive_obj["PAYLOAD"])
-    return nickname
+from src.connect import connect
+from src.connect import join_server
+from src.report import get_report
+from src.session import quit_session
 
-def get_report(client):
-    client.sendall(report_request())
-    data = client.recv(1024)
-    print(data)
-    receive_obj = pickle.loads(data)
-    print(receive_obj["PAYLOAD"])
+def send_chat(message):
+    payload = payload_type.copy()
+    payload["PAYLOAD"] = message
+    payload["PAYLOAD_LENGTH"] = len(payload["PAYLOAD"])
+    return pickle.dumps(payload)
 
 def receive(client):
-    while True:
+    while not STOP_EVENT.is_set():
         try:
             data = client.recv(1024)
             receive_obj = pickle.loads(data)
-            # print(receive_obj)
             message = receive_obj["PAYLOAD"]
-            time = receive_obj["TIME"]
-            print('{} {}'.format(time, message))
+            print(message)
         except:
             print("An error occured!")
             client.close()
             break
 
 def write(client, nickname):
-    while True:
+    global IS_CONNECTED
+    while not STOP_EVENT.is_set():
         user_input = input('')
+        if (user_input.lower() == 'q'):
+            client.sendall(quit_session())
+            STOP_EVENT.set()
+            IS_CONNECTED = False
+            break
+        # todo: refactor this to handle all cases
         message = '{}: {}'.format(nickname, user_input)
         client.sendall(send_chat(message))
 
 if __name__ == "__main__":
+    client = connect()
     while True:
-        if (SERVER_STATUS == True):
+        if (IS_CONNECTED == True):
             continue
         choice = start_menu()
-        client = connect()
-        SERVER_STATUS = True
         if (choice == '1'):
             get_report(client)
+            IS_CONNECTED = False
         elif (choice == '2'):
             nickname = join_server(client)
+            IS_CONNECTED = True
             receive_thread = threading.Thread(target=receive, args=(client, ))
             receive_thread.start()
             write_thread = threading.Thread(target=write, args=(client, nickname, ))
             write_thread.start()
         elif (choice == '3'):
+            STOP_EVENT.set()
             break

@@ -1,11 +1,12 @@
 import socket, threading, sys, pickle
 from src.payload_type import payload_type
+from src.attachment import upload_attachment
+from src.handle_flag import handle_flag
 
 host_name = socket.gethostname()
 ip = socket.gethostbyname(host_name)
 SERVER_STATUS = False
 IS_CONNECTED = False
-STOP_EVENT = threading.Event()
 
 def start_menu():
     print("Please select one of the following options:")
@@ -15,51 +16,40 @@ def start_menu():
     choice = input("Your choice: ")
     return choice
 
-# def connect():
-#     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#     try:
-#         client.connect((ip, PORT))
-#     except:
-#         print('The server cannot accept the connection.')
-#         client.close()
-#         sys.exit()
-#     return client
-
 from src.connect import connect
 from src.connect import join_server
 from src.report import get_report
 from src.session import quit_session
 
-def send_chat(message):
-    payload = payload_type.copy()
-    payload["PAYLOAD"] = message
-    payload["PAYLOAD_LENGTH"] = len(payload["PAYLOAD"])
-    return pickle.dumps(payload)
-
 def receive(client):
-    while not STOP_EVENT.is_set():
+    global IS_CONNECTED
+
+    while IS_CONNECTED:
         try:
             data = client.recv(1024)
             receive_obj = pickle.loads(data)
-            message = receive_obj["PAYLOAD"]
-            print(message)
+            if not handle_flag(receive_obj):
+                IS_CONNECTED = False
         except:
             print("An error occured!")
             client.close()
             break
 
-def write(client, nickname):
+def write(client):
     global IS_CONNECTED
-    while not STOP_EVENT.is_set():
+    while IS_CONNECTED:
         user_input = input('')
         if (user_input.lower() == 'q'):
             client.sendall(quit_session())
-            STOP_EVENT.set()
-            IS_CONNECTED = False
             break
-        # todo: refactor this to handle all cases
-        message = '{}: {}'.format(nickname, user_input)
-        client.sendall(send_chat(message))
+        elif (user_input.lower() == 'a'):
+            filename = input("Please enter the file path and name: ")
+            client.sendall(upload_attachment(filename))
+        else:
+            payload = payload_type.copy()
+            payload["PAYLOAD"] = '{}'.format(user_input)
+            payload["PAYLOAD_LENGTH"] = len(payload["PAYLOAD"])
+            client.sendall(pickle.dumps(payload))
 
 if __name__ == "__main__":
     client = connect()
@@ -71,12 +61,16 @@ if __name__ == "__main__":
             get_report(client)
             IS_CONNECTED = False
         elif (choice == '2'):
-            nickname = join_server(client)
+            if not join_server(client):
+                continue
             IS_CONNECTED = True
             receive_thread = threading.Thread(target=receive, args=(client, ))
             receive_thread.start()
-            write_thread = threading.Thread(target=write, args=(client, nickname, ))
+            write_thread = threading.Thread(target=write, args=(client, ))
             write_thread.start()
         elif (choice == '3'):
-            STOP_EVENT.set()
+            client.close()
             break
+        else:
+            print("Invalid choice. Please try again.")
+            continue

@@ -9,6 +9,5 @@ def report_request():
 def get_report(client):
     client.sendall(report_request())
     data = client.recv(1024)
-    print(data)
     receive_obj = pickle.loads(data)
     print(receive_obj["PAYLOAD"])

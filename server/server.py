@@ -1,4 +1,4 @@
-import socket, threading, time, pickle, os   
+import socket, threading, pickle  
 from src.handle_flag import handle_flag                               
 
 HOST_NAME = socket.gethostname()
@@ -22,7 +22,7 @@ def handle(client):
         try:
             data = client.recv(1024)
             received_obj = pickle.loads(data)
-            print('recu')
+            print("Received object: ")
             print(received_obj)
             handle_flag(received_obj, nicknames, clients, client)
         except:                                                        

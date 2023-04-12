@@ -25,7 +25,13 @@ def join_session(obj, nicknames, clients, client):
     payload["JOIN_ACCEPT_FLAG"] = 1
     nicknames.append(obj["USERNAME"])
     client.sendall(pickle.dumps(payload))
-    print("{} join the chatroom.".format(obj["USERNAME"]))
+    nickname = "{} join the chatroom.".format(obj["USERNAME"])
+    print(nickname)
+    payload = payload_type.copy()
+    payload["NEW_USER_FLAG"] = 1
+    payload["USERNAME"] = obj["USERNAME"]
+    payload["PAYLOAD"] = nickname
+    broadcast(payload, clients, nicknames, client)
     return payload
 
 def quit_session(obj, nicknames, clients, client):

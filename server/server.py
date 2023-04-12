@@ -10,6 +10,8 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((IP_ADDRESS, PORT))                                         
 server.listen(100)
 
+print('Server is listening on {}:{}'.format(IP_ADDRESS, PORT))
+
 clients = []
 nicknames = []
 
